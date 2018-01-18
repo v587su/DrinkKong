@@ -1,4 +1,4 @@
-let status = 0; // 0: drink  1: bother
+let status = 0; // 0: 已喝水状态  1: 打扰状态
 chrome.runtime.onInstalled.addListener(
   (details) => {
     if(details.reason === 'install') {
@@ -25,10 +25,11 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 chrome.storage.sync.get('drinkKong', (items) => {
+  console.log(items);
   const today = new Date();
-  const { drinkDate } = config;
-  if(drinkDate) {
-    if(drinkDate.getDate() === today.getDate() && drinkDate.getMonth() === today.getMonth()) {
+  if(items.drinkKong) {
+    const { drinkDate } = items.drinkKong;
+    if(drinkDate && drinkDate.getDate() === today.getDate() && drinkDate.getMonth() === today.getMonth()) {
       showNotification({
         title: text.todayTitle,
         message: text.todayContent
@@ -38,9 +39,9 @@ chrome.storage.sync.get('drinkKong', (items) => {
         title: text.beginTitle,
         message: text.beginContent
       });
-      config.drinkDate = today;
-      chrome.storage.sync.set({drinkKong: config});
     }
+  } else {
+    chrome.storage.sync.set({drinkKong:config});
   }
   console.log(items);
   showReminder(status);
@@ -49,12 +50,10 @@ chrome.storage.sync.get('drinkKong', (items) => {
 const timerConfig = (type) => {
   const intervalConfig = [{
     // 0 drink config
-      interval: config.frequency,
       title: text.drinkTitle,
       message: text.drinkContent,
     },{
     // 1 bother config
-      interval: 300,
       title: text.botherTitle,
       message: text.botherContent
     }
@@ -64,16 +63,22 @@ const timerConfig = (type) => {
 
 const showReminder = (type) => {
   const setting = timerConfig(type);
-  const onClick = () => {
-    const hasDrunk = confirm(text.drinkConfirm);
-    if(hasDrunk) {
-      status = 0;
-    } else {
-      status = 1;
-    }
+  const onButtonClick = (buttonIndex) => {
+    status = buttonIndex;
+    const interval = status === 0 ? config.frequency : config.botherFrequency;
+    chrome.storage.sync.get('drinkKong', (items) => {
+      let intervalLeft = interval;
+      if(items.nextReminder && items.nextReminder > Date.now()) {
+        intervalLeft = items.nextReminder - Date.now();
+      } else if(status === 0){
+        const nextReminder = Date.now() + interval;
+        const nextItems = Object.assign(items.drinkKong, {nextReminder});
+        chrome.storage.sync.set({drinkKong: nextItems});
+      }
+      console.log(intervalLeft);
+      setTimeout(() => showReminder(status),intervalLeft);
+    });
+    clearNotification();
   };
-  showNotification(setting, () => onClick());
-  console.log(status);
-  setTimeout(() => showReminder(status),setting.interval);
+  showNotification(setting, onButtonClick, 'reminder');
 };
-
