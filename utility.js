@@ -1,6 +1,5 @@
 const config = {
-  name: 'drinkKong',
-  frequency: 3600,
+  frequency: 36000,
   drinkDate: null,
   version: '0.0.1'
 };
@@ -23,27 +22,6 @@ const text = {
 
 //载入储存内容setting
 
-// function showNotification(note, onClick = function(){}) {
-//   if (!Notification) {
-//     console.log('no Notification');
-//     return;
-//   }
-//   let permission = Notification.permission;
-//   if (permission === 'granted') {
-//     const notification = new Notification(
-//       note.title || "单词控",
-//       {
-//         body: note.content,
-//         icon: note.icon || chrome.extension.getURL("asset/pic3.jpg")
-//       }
-//     );
-//     notification.onclick = onClick;
-//   } else {
-//     Notification.requestPermission();
-//     showNotification(note, onClick);
-//   }
-// }
-
 const showNotification = (note, onClick = () => {}) => {
   if (!Notification) {
     console.log('no Notification');
@@ -64,6 +42,18 @@ const showNotification = (note, onClick = () => {}) => {
     showNotification(note, onClick);
   }
 };
+
+const showNotification = (message, noClick = () => {},id = '0') => {
+  chrome.notifications.getPermissionLevel((level) => {
+    if(level === 'granted') {
+      chrome.notifications.create(id, message);
+    } else {
+      Notification.requestPermission();
+      showNotification(message, onClick);
+    }
+  })
+};
+
 
 const closeNotification = () => {
   chrome.notifications.getAll((notifications) => {
