@@ -1,6 +1,6 @@
 const config = {
-  frequency: 3600000,
-  botherFrequency: 300000,
+  frequency: 10000,
+  botherFrequency: 3000,
   drinkDate: null,
   nextReminder: null,
   version: '0.0.1'

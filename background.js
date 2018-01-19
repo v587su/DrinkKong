@@ -25,11 +25,11 @@ chrome.storage.onChanged.addListener((changes) => {
 });
 
 chrome.storage.sync.get('drinkKong', (items) => {
-  console.log(items);
   const today = new Date();
   if(items.drinkKong) {
     const { drinkDate } = items.drinkKong;
-    if(drinkDate && drinkDate.getDate() === today.getDate() && drinkDate.getMonth() === today.getMonth()) {
+    if(drinkDate && Object.prototype.toString.call(drinkDate) === "[object Array]" &&
+      drinkDate.getDate() === today.getDate() && drinkDate.getMonth() === today.getMonth()) {
       showNotification({
         title: text.todayTitle,
         message: text.todayContent
@@ -39,12 +39,23 @@ chrome.storage.sync.get('drinkKong', (items) => {
         title: text.beginTitle,
         message: text.beginContent
       });
+      chrome.storage.sync.set({drinkKong:Object.assign(items,{drinkDate:today})});
     }
   } else {
-    chrome.storage.sync.set({drinkKong:config});
+    chrome.storage.sync.set({drinkKong:Object.assign(config,{drinkDate:today})});
   }
   console.log(items);
-  showReminder(status);
+  let intervalLeft = config.frequency;
+  if(items.nextReminder && items.nextReminder > Date.now()) {
+    intervalLeft = items.nextReminder - Date.now();
+    console.log('intervalLeft',intervalLeft);
+  } else if(status === 0){
+    console.log(items.nextReminder, Date.now());
+    const nextReminder = Date.now() + config.frequency;
+    const nextItems = Object.assign(items.drinkKong, {nextReminder, drinkDate: new Date()});
+    chrome.storage.sync.set({drinkKong: nextItems});
+  }
+  setTimeout(() => showReminder(status),intervalLeft);
 });
 
 const timerConfig = (type) => {
@@ -72,8 +83,9 @@ const showReminder = (type) => {
         intervalLeft = items.nextReminder - Date.now();
       } else if(status === 0){
         const nextReminder = Date.now() + interval;
-        const nextItems = Object.assign(items.drinkKong, {nextReminder});
+        const nextItems = Object.assign(items.drinkKong, {nextReminder, drinkDate: new Date()});
         chrome.storage.sync.set({drinkKong: nextItems});
+        console.log('nextItems', nextItems);
       }
       console.log(intervalLeft);
       setTimeout(() => showReminder(status),intervalLeft);
