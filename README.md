@@ -1,2 +1,2 @@
 # DrinkKong
-A chrome Extension to warn you drink water.
+A chrome Extension to remind users to drink water.
